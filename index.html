@@ -558,7 +558,70 @@
                         <option value="机场分局">机场分局</option>
                     </select>
                 </div>
-                <div class="form-group"><label>派出所名称 <span class="required">*</span></label><input type="text" id="policeStation" placeholder="例：辛店派出所、黄河路派出所" maxlength="30" required></div>
+                <div class="form-group"><label>派出所名称 <span class="required">*</span></label>
+                    <input list="policeStationList" id="policeStation" placeholder="请选择或输入派出所名称" maxlength="30" required autocomplete="off">
+                    <datalist id="policeStationList">
+                        <!-- 以下为59个派出所名称（按用户提供顺序） -->
+                        <option value="文汇派出所">
+                        <option value="黄河路派出所">
+                        <option value="辛店派出所">
+                        <option value="六户派出所">
+                        <option value="牛庄派出所">
+                        <option value="史口派出所">
+                        <option value="龙居派出所">
+                        <option value="胜园派出所">
+                        <option value="新区派出所">
+                        <option value="明月派出所">
+                        <option value="胜利派出所">
+                        <option value="广利派出所">
+                        <option value="金水派出所">
+                        <option value="东三路派出所">
+                        <option value="东六路派出所">
+                        <option value="河口派出所">
+                        <option value="六合派出所">
+                        <option value="义和派出所">
+                        <option value="新户派出所">
+                        <option value="孤岛派出所">
+                        <option value="军马场派出所">
+                        <option value="开发区派出所">
+                        <option value="沿黄派出所">
+                        <option value="蓝色经济产业园派出所">
+                        <option value="垦利街道派出所">
+                        <option value="兴隆派出所">
+                        <option value="郝家派出所">
+                        <option value="董集派出所">
+                        <option value="胜坨派出所">
+                        <option value="永安派出所">
+                        <option value="黄河口派出所">
+                        <option value="垦东派出所">
+                        <option value="红光派出所">
+                        <option value="广饶街道派出所">
+                        <option value="乐安街道派出所">
+                        <option value="大王派出所">
+                        <option value="李鹊派出所">
+                        <option value="花官派出所">
+                        <option value="陈官派出所">
+                        <option value="稻庄派出所">
+                        <option value="大码头派出所">
+                        <option value="利津派出所">
+                        <option value="凤凰城派出所">
+                        <option value="陈庄派出所">
+                        <option value="盐窝派出所">
+                        <option value="北宋派出所">
+                        <option value="明集派出所">
+                        <option value="汀罗派出所">
+                        <option value="刁口派出所">
+                        <option value="仙河派出所">
+                        <option value="海港派出所">
+                        <option value="港城派出所">
+                        <option value="丁庄派出所">
+                        <option value="东海派出所">
+                        <option value="广北派出所">
+                        <option value="黄河口南岸派出所">
+                        <option value="黄河口北岸派出所">
+                        <option value="其他">
+                    </datalist>
+                </div>
                 <div class="form-group"><label>昵称 <span class="required">*</span></label><input type="text" id="nickname" placeholder="您的称呼" maxlength="20" required></div>
                 <div class="form-group"><label>业务类别 <span class="required">*</span></label><select id="category" required><option value="complaint">📢 业务投诉</option><option value="household">🏠 户籍办理</option><option value="consult">💬 咨询建议</option></select></div>
                 <div class="form-group"><label>留言内容 <span class="required">*</span></label><textarea id="content" rows="3" placeholder="请详细描述您的问题或建议..." maxlength="400" required></textarea></div>
@@ -723,7 +786,6 @@
             resultDiv.innerHTML = '<div class="empty-msg">📭 未查询到该手机号的留言记录，请确认号码是否正确。</div>';
             return;
         }
-        // 按时间倒序
         const sorted = [...userMessages].sort((a,b) => b.timestamp - a.timestamp);
         let html = '';
         sorted.forEach(msg => {
