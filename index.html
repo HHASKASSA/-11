@@ -405,6 +405,34 @@
             color: #2c7a4d;
             background: #eaf7ef;
         }
+        .query-btn {
+            border-color: #1e4663;
+            color: #1e4663;
+            background: #eef3fc;
+        }
+        .query-result {
+            margin-top: 16px;
+            background: #f8fafd;
+            border-radius: 24px;
+            padding: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .query-item {
+            background: white;
+            border-radius: 20px;
+            padding: 12px;
+            margin-bottom: 12px;
+            border: 1px solid #e2e8f0;
+        }
+        .query-item:last-child { margin-bottom: 0; }
+        .query-reply {
+            margin-top: 8px;
+            padding-top: 6px;
+            border-top: 1px dashed #cbdbe0;
+            color: #1e4663;
+            font-size: 0.8rem;
+        }
 
         .modal {
             display: none;
@@ -541,7 +569,20 @@
         </div>
     </div>
 
-    <!-- 统计 + 留言列表 -->
+    <!-- 群众留言查询窗口 -->
+    <div class="card">
+        <div class="card-header"><span>🔍</span> 查询我的留言（凭手机号）</div>
+        <div class="card-content">
+            <div class="form-group">
+                <label>输入您的手机号</label>
+                <input type="text" id="queryPhone" placeholder="请填写留言时使用的手机号" maxlength="20">
+            </div>
+            <button id="doQueryBtn" class="btn-outline query-btn" style="width:100%;">📋 查询我的留言及回复</button>
+            <div id="queryResultArea" class="query-result" style="display:none;"></div>
+        </div>
+    </div>
+
+    <!-- 统计 + 留言列表（后台管理） -->
     <div class="card">
         <div class="card-header"><span>📋</span> 群众留言板 · 督办阅办</div>
         <div class="card-content">
@@ -614,7 +655,7 @@
         "农高区分局": "ngq008",
         "保护区分局": "bhq009",
         "机场分局": "jc010",
-        "东营市局": "dczd1"   // 超级权限
+        "东营市局": "dczd1"
     };
     // 回复权限密码列表
     const REPLY_PASSWORDS = new Set([
@@ -665,6 +706,42 @@
         const rows = messages.map(msg => { const categoryName = getCategoryInfo(msg.category).name; const isReplied = msg.reply && msg.reply.text ? '是' : '否'; const replyText = msg.reply ? msg.reply.text : ''; const replyReplier = msg.reply ? msg.reply.replier : ''; const replyTime = msg.reply ? formatDateTime(msg.reply.time) : ''; return [msg.id, msg.nickname, msg.policeStation, msg.branch, categoryName, msg.content, msg.contact, formatDateTime(msg.timestamp), isReplied, replyText, replyReplier, replyTime]; });
         const csvContent = [headers, ...rows].map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
         const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' }); const link = document.createElement('a'); const url = URL.createObjectURL(blob); link.href = url; link.setAttribute('download', `${currentAuthorizedBranch === 'all' ? '东营市局_全部留言' : currentAuthorizedBranch}_留言导出_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.csv`); document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url);
+    }
+
+    // 群众查询功能：根据手机号查询自己的留言
+    function queryUserMessages() {
+        const phone = document.getElementById('queryPhone').value.trim();
+        const resultDiv = document.getElementById('queryResultArea');
+        if (!phone) {
+            alert('请输入手机号');
+            return;
+        }
+        const allMessages = getMessages();
+        const userMessages = allMessages.filter(msg => msg.contact === phone);
+        if (userMessages.length === 0) {
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<div class="empty-msg">📭 未查询到该手机号的留言记录，请确认号码是否正确。</div>';
+            return;
+        }
+        // 按时间倒序
+        const sorted = [...userMessages].sort((a,b) => b.timestamp - a.timestamp);
+        let html = '';
+        sorted.forEach(msg => {
+            const catInfo = getCategoryInfo(msg.category);
+            const replyHtml = msg.reply && msg.reply.text ? 
+                `<div class="query-reply"><strong>🔹 所长回复：</strong> ${escapeHtml(msg.reply.text)}<br><span style="font-size:0.7rem;">回复时间：${formatDateTime(msg.reply.time)}</span></div>` : 
+                '<div class="query-reply" style="color:#c2410c;">⏳ 暂无官方回复，请耐心等待</div>';
+            html += `
+                <div class="query-item">
+                    <div><strong>${escapeHtml(msg.nickname) || '匿名'}</strong> <span class="category-badge ${catInfo.className}" style="display:inline-block; margin-left:8px;">${catInfo.name}</span></div>
+                    <div style="font-size:0.75rem; color:#6c7f9c; margin:4px 0;">📅 ${formatDateTime(msg.timestamp)} &nbsp; 🏛️ ${escapeHtml(msg.policeStation)}</div>
+                    <div style="margin:8px 0;">${escapeHtml(msg.content)}</div>
+                    ${replyHtml}
+                </div>
+            `;
+        });
+        resultDiv.style.display = 'block';
+        resultDiv.innerHTML = html;
     }
 
     function renderMessages() {
@@ -739,8 +816,8 @@
             const now = Date.now(); const overdueTime = now - 73 * 3600 * 1000;
             const samples = [
                 { id: generateId(), branch: '东营分局', nickname: '张先生', policeStation: '辛店派出所', category: 'complaint', content: '晚上广场舞音响太吵，希望派出所协调。', contact: '138****1234', timestamp: overdueTime, reply: null },
-                { id: generateId(), branch: '河口分局', nickname: '李女士', policeStation: '河口派出所', category: 'household', content: '新生儿落户需要哪些材料？', contact: '李女士微信', timestamp: now - 1*24*3600*1000, reply: { text: '需出生证明、父母户口本、结婚证等。', time: now - 12*3600*1000, replier: 'hkhk1' } },
-                { id: generateId(), branch: '开发区分局', nickname: '王先生', policeStation: '东六路派出所', category: 'consult', content: '建议增加反诈宣传。', contact: '王先生', timestamp: now - 2*24*3600*1000, reply: null }
+                { id: generateId(), branch: '河口分局', nickname: '李女士', policeStation: '河口派出所', category: 'household', content: '新生儿落户需要哪些材料？', contact: '13812345678', timestamp: now - 1*24*3600*1000, reply: { text: '需出生证明、父母户口本、结婚证等。', time: now - 12*3600*1000, replier: 'hkhk1' } },
+                { id: generateId(), branch: '开发区分局', nickname: '王先生', policeStation: '东六路派出所', category: 'consult', content: '建议增加反诈宣传。', contact: '13987654321', timestamp: now - 2*24*3600*1000, reply: null }
             ];
             saveMessages(samples);
         }
@@ -788,6 +865,7 @@
         document.getElementById('exportBtn').addEventListener('click', handleExport);
         document.getElementById('contactBtn').addEventListener('click', showContactModal);
         document.getElementById('closeModalBtn').addEventListener('click', hideContactModal);
+        document.getElementById('doQueryBtn').addEventListener('click', queryUserMessages);
         window.addEventListener('click', (e) => { if (e.target === document.getElementById('contactModal')) hideContactModal(); });
         if (typeof QRCode !== 'undefined') generateQR();
         else window.addEventListener('load', () => setTimeout(() => { if (typeof QRCode !== 'undefined') generateQR(); else document.getElementById('qrcode').innerHTML = '<div style="font-size:10px;">📱 请手动分享当前页面链接</div>'; }, 300));
