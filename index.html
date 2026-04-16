@@ -133,6 +133,12 @@ referrerPolicy="no-referrer-when-downgrade"></a></div></noscript>
             color: #c2410c;
             margin-left: 4px;
         }
+        label .optional {
+            color: #6c7f9c;
+            font-weight: normal;
+            font-size: 0.7rem;
+            margin-left: 6px;
+        }
         input, select, textarea {
             width: 100%;
             padding: 12px 16px;
@@ -286,6 +292,14 @@ referrerPolicy="no-referrer-when-downgrade"></a></div></noscript>
         .category-complaint { background: #fee9e6; color: #b13e3e; }
         .category-household { background: #e0f0ea; color: #2a6b4e; }
         .category-consult { background: #e9f0ff; color: #2c6b9e; }
+        .complaint-type-badge {
+            font-size: 0.65rem;
+            background: #fef3c7;
+            color: #b45309;
+            padding: 2px 8px;
+            border-radius: 30px;
+            display: inline-block;
+        }
         .msg-time {
             font-size: 0.65rem;
             color: #8a99b4;
@@ -574,7 +588,6 @@ referrerPolicy="no-referrer-when-downgrade"></a></div></noscript>
                 <div class="form-group"><label>派出所名称 <span class="required">*</span></label>
                     <input list="policeStationList" id="policeStation" placeholder="请选择或输入派出所名称" maxlength="30" required autocomplete="off">
                     <datalist id="policeStationList">
-                        <!-- 以下为59个派出所名称（按用户提供顺序） -->
                         <option value="文汇派出所">
                         <option value="黄河路派出所">
                         <option value="辛店派出所">
@@ -636,7 +649,34 @@ referrerPolicy="no-referrer-when-downgrade"></a></div></noscript>
                     </datalist>
                 </div>
                 <div class="form-group"><label>昵称 <span class="required">*</span></label><input type="text" id="nickname" placeholder="您的称呼" maxlength="20" required></div>
-                <div class="form-group"><label>业务类别 <span class="required">*</span></label><select id="category" required><option value="complaint">📢 业务投诉</option><option value="household">🏠 户籍办理</option><option value="consult">💬 咨询建议</option></select></div>
+                <div class="form-group"><label>业务类别 <span class="required">*</span></label>
+                    <select id="category" required>
+                        <option value="complaint">📢 业务投诉</option>
+                        <option value="household">🏠 户籍办理</option>
+                        <option value="consult">💬 咨询建议</option>
+                    </select>
+                </div>
+                <div class="form-group"><label>投诉举报具体类型 <span class="optional">（仅投诉类需细化）</span></label>
+                    <select id="complaintType">
+                        <option value="">请选择具体类型（可选）</option>
+                        <option value="执法不作为慢作为">执法不作为慢作为</option>
+                        <option value="办人情案关系案">办人情案关系案</option>
+                        <option value="不按程序办理">不按程序办理</option>
+                        <option value="违规查扣冻涉案财物">违规查扣冻涉案财物</option>
+                        <option value="非法搜查拘禁">非法搜查拘禁</option>
+                        <option value="滥用强制措施">滥用强制措施</option>
+                        <option value="刑讯逼供">刑讯逼供</option>
+                        <option value="执法简单粗暴态度恶劣">执法简单粗暴态度恶劣</option>
+                        <option value="违规收费处罚">违规收费处罚</option>
+                        <option value="违规插手经济纠纷">违规插手经济纠纷</option>
+                        <option value="错误录入公民个人信息">错误录入公民个人信息</option>
+                        <option value="违反警规警纪">违反警规警纪</option>
+                        <option value="服务管理不规范">服务管理不规范</option>
+                        <option value="贪污受贿等违反廉洁纪律">贪污受贿等违反廉洁纪律</option>
+                        <option value="违反社会主义道德">违反社会主义道德</option>
+                        <option value="其他">其他</option>
+                    </select>
+                </div>
                 <div class="form-group"><label>留言内容 <span class="required">*</span></label><textarea id="content" rows="3" placeholder="请详细描述您的问题或建议..." maxlength="400" required></textarea></div>
                 <div class="form-group"><label>联系方式 <span class="required">*</span></label><input type="text" id="contact" placeholder="手机号 / 微信号，便于所长回复" required></div>
                 <button type="submit" class="btn-submit" id="submitBtn"><span>📬</span> 提交留言</button>
@@ -719,7 +759,6 @@ referrerPolicy="no-referrer-when-downgrade"></a></div></noscript>
     const STORAGE_KEY = 'police_station_messages';
     const DELETE_PASSWORD = '110';
     const EXPORT_PASSWORD = '110110';
-    // 分局密码映射表（包含超级权限：东营市局）
     const BRANCH_PASSWORDS = {
         "东营分局": "dy001",
         "河口分局": "hk002",
@@ -733,7 +772,6 @@ referrerPolicy="no-referrer-when-downgrade"></a></div></noscript>
         "机场分局": "jc010",
         "东营市局": "dczd1"
     };
-    // 回复权限密码列表
     const REPLY_PASSWORDS = new Set([
         'dywh1','dyxd1','dysy1','dysk1','dylh1','dynz1','dylj1','dyhhl','dyxq1',
         'hkhk1','hkkf1','hkgd1','hkxh1','hkyh1','hklh1','hkjm1','hkls1',
@@ -745,7 +783,7 @@ referrerPolicy="no-referrer-when-downgrade"></a></div></noscript>
     ]);
 
     let currentFilterCategory = 'all';
-    let currentAuthorizedBranch = null; // 当前授权分局，特殊值 'all' 表示超级权限
+    let currentAuthorizedBranch = null;
 
     function getMessages() { const raw = localStorage.getItem(STORAGE_KEY); if (!raw) return []; try { return JSON.parse(raw); } catch(e) { return []; } }
     function saveMessages(messages) { localStorage.setItem(STORAGE_KEY, JSON.stringify(messages)); }
@@ -772,48 +810,28 @@ referrerPolicy="no-referrer-when-downgrade"></a></div></noscript>
     function exportToCSV() {
         if (!currentAuthorizedBranch) { alert('请先验证分局权限后再导出'); return; }
         let messages = [];
-        if (currentAuthorizedBranch === 'all') {
-            messages = getMessages();
-        } else {
-            messages = getMessages().filter(msg => msg.branch === currentAuthorizedBranch);
-        }
+        if (currentAuthorizedBranch === 'all') { messages = getMessages(); } else { messages = getMessages().filter(msg => msg.branch === currentAuthorizedBranch); }
         if (messages.length === 0) { alert('暂无留言可导出'); return; }
-        const headers = ['ID','昵称','派出所名称','所属分局','业务类别','留言内容','联系方式','留言时间','是否已回复','回复内容','回复人','回复时间'];
-        const rows = messages.map(msg => { const categoryName = getCategoryInfo(msg.category).name; const isReplied = msg.reply && msg.reply.text ? '是' : '否'; const replyText = msg.reply ? msg.reply.text : ''; const replyReplier = msg.reply ? msg.reply.replier : ''; const replyTime = msg.reply ? formatDateTime(msg.reply.time) : ''; return [msg.id, msg.nickname, msg.policeStation, msg.branch, categoryName, msg.content, msg.contact, formatDateTime(msg.timestamp), isReplied, replyText, replyReplier, replyTime]; });
+        const headers = ['ID','昵称','派出所名称','所属分局','业务类别','投诉举报具体类型','留言内容','联系方式','留言时间','是否已回复','回复内容','回复人','回复时间'];
+        const rows = messages.map(msg => { const categoryName = getCategoryInfo(msg.category).name; const isReplied = msg.reply && msg.reply.text ? '是' : '否'; const replyText = msg.reply ? msg.reply.text : ''; const replyReplier = msg.reply ? msg.reply.replier : ''; const replyTime = msg.reply ? formatDateTime(msg.reply.time) : ''; return [msg.id, msg.nickname, msg.policeStation, msg.branch, categoryName, msg.complaintType || '', msg.content, msg.contact, formatDateTime(msg.timestamp), isReplied, replyText, replyReplier, replyTime]; });
         const csvContent = [headers, ...rows].map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
         const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' }); const link = document.createElement('a'); const url = URL.createObjectURL(blob); link.href = url; link.setAttribute('download', `${currentAuthorizedBranch === 'all' ? '东营市局_全部留言' : currentAuthorizedBranch}_留言导出_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.csv`); document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url);
     }
 
-    // 群众查询功能：根据手机号查询自己的留言
     function queryUserMessages() {
         const phone = document.getElementById('queryPhone').value.trim();
         const resultDiv = document.getElementById('queryResultArea');
-        if (!phone) {
-            alert('请输入手机号');
-            return;
-        }
+        if (!phone) { alert('请输入手机号'); return; }
         const allMessages = getMessages();
         const userMessages = allMessages.filter(msg => msg.contact === phone);
-        if (userMessages.length === 0) {
-            resultDiv.style.display = 'block';
-            resultDiv.innerHTML = '<div class="empty-msg">📭 未查询到该手机号的留言记录，请确认号码是否正确。</div>';
-            return;
-        }
+        if (userMessages.length === 0) { resultDiv.style.display = 'block'; resultDiv.innerHTML = '<div class="empty-msg">📭 未查询到该手机号的留言记录，请确认号码是否正确。</div>'; return; }
         const sorted = [...userMessages].sort((a,b) => b.timestamp - a.timestamp);
         let html = '';
         sorted.forEach(msg => {
             const catInfo = getCategoryInfo(msg.category);
-            const replyHtml = msg.reply && msg.reply.text ? 
-                `<div class="query-reply"><strong>🔹 所长回复：</strong> ${escapeHtml(msg.reply.text)}<br><span style="font-size:0.7rem;">回复时间：${formatDateTime(msg.reply.time)}</span></div>` : 
-                '<div class="query-reply" style="color:#c2410c;">⏳ 暂无官方回复，请耐心等待</div>';
-            html += `
-                <div class="query-item">
-                    <div><strong>${escapeHtml(msg.nickname) || '匿名'}</strong> <span class="category-badge ${catInfo.className}" style="display:inline-block; margin-left:8px;">${catInfo.name}</span></div>
-                    <div style="font-size:0.75rem; color:#6c7f9c; margin:4px 0;">📅 ${formatDateTime(msg.timestamp)} &nbsp; 🏛️ ${escapeHtml(msg.policeStation)}</div>
-                    <div style="margin:8px 0;">${escapeHtml(msg.content)}</div>
-                    ${replyHtml}
-                </div>
-            `;
+            const complaintTypeHtml = msg.complaintType ? `<span class="complaint-type-badge" style="margin-left:8px;">📌 ${escapeHtml(msg.complaintType)}</span>` : '';
+            const replyHtml = msg.reply && msg.reply.text ? `<div class="query-reply"><strong>🔹 所长回复：</strong> ${escapeHtml(msg.reply.text)}<br><span style="font-size:0.7rem;">回复时间：${formatDateTime(msg.reply.time)}</span></div>` : '<div class="query-reply" style="color:#c2410c;">⏳ 暂无官方回复，请耐心等待</div>';
+            html += `<div class="query-item"><div><strong>${escapeHtml(msg.nickname) || '匿名'}</strong> <span class="category-badge ${catInfo.className}" style="display:inline-block; margin-left:8px;">${catInfo.name}</span>${complaintTypeHtml}</div><div style="font-size:0.75rem; color:#6c7f9c; margin:4px 0;">📅 ${formatDateTime(msg.timestamp)} &nbsp; 🏛️ ${escapeHtml(msg.policeStation)}</div><div style="margin:8px 0;">${escapeHtml(msg.content)}</div>${replyHtml}</div>`;
         });
         resultDiv.style.display = 'block';
         resultDiv.innerHTML = html;
@@ -827,11 +845,7 @@ referrerPolicy="no-referrer-when-downgrade"></a></div></noscript>
             return;
         }
         let allMessages = [];
-        if (currentAuthorizedBranch === 'all') {
-            allMessages = getMessages();
-        } else {
-            allMessages = getMessages().filter(msg => msg.branch === currentAuthorizedBranch);
-        }
+        if (currentAuthorizedBranch === 'all') { allMessages = getMessages(); } else { allMessages = getMessages().filter(msg => msg.branch === currentAuthorizedBranch); }
         let filteredMessages = allMessages;
         if (currentFilterCategory !== 'all') filteredMessages = allMessages.filter(msg => msg.category === currentFilterCategory);
         updateStats(allMessages);
@@ -844,14 +858,10 @@ referrerPolicy="no-referrer-when-downgrade"></a></div></noscript>
             const overdueClass = overdue ? 'msg-card overdue' : 'msg-card'; 
             const overdueBadge = overdue ? '<span class="overdue-badge">⚠️ 超时未回复</span>' : ''; 
             let replyHtml = ''; 
-            if (msg.reply && msg.reply.text) { 
-                const replyTime = formatTime(msg.reply.time); 
-                let displayReplier = msg.reply.replier; 
-                if (displayReplier && displayReplier.length > 4) displayReplier = displayReplier.substring(0,4); 
-                replyHtml = `<div class="reply-section"><div class="reply-content"><strong>🔹 官方回复：</strong> ${escapeHtml(msg.reply.text)}</div><div class="reply-meta">回复人：${escapeHtml(displayReplier)} 于 ${replyTime}</div></div>`; 
-            }
+            if (msg.reply && msg.reply.text) { const replyTime = formatTime(msg.reply.time); let displayReplier = msg.reply.replier; if (displayReplier && displayReplier.length > 4) displayReplier = displayReplier.substring(0,4); replyHtml = `<div class="reply-section"><div class="reply-content"><strong>🔹 官方回复：</strong> ${escapeHtml(msg.reply.text)}</div><div class="reply-meta">回复人：${escapeHtml(displayReplier)} 于 ${replyTime}</div></div>`; }
             const branchBadge = currentAuthorizedBranch === 'all' ? `<span class="branch-badge">🏢 ${escapeHtml(msg.branch)}</span>` : '';
-            return `<div class="${overdueClass}" data-id="${msg.id}"><div class="msg-header"><div class="msg-left"><span class="nickname">${escapeHtml(msg.nickname) || '匿名群众'}</span><span class="station-name">🏛️ ${escapeHtml(msg.policeStation) || '未填派出所'}</span>${branchBadge}<span class="category-badge ${catInfo.className}">${catInfo.name}</span>${overdueBadge}</div><div style="display:flex; align-items:center; gap:6px;"><span class="msg-time">${formatTime(msg.timestamp)}</span><button class="delete-btn" data-id="${msg.id}" title="删除留言（需密码）">🗑️</button></div></div><div class="msg-content">${escapeHtml(msg.content)}</div>${contactHtml}${replyHtml}<button class="btn-reply" data-id="${msg.id}" data-nick="${escapeHtml(msg.nickname)}">📝 回复留言</button></div>`; 
+            const complaintTypeHtml = msg.complaintType ? `<span class="complaint-type-badge" style="margin-left:6px;">📌 ${escapeHtml(msg.complaintType)}</span>` : '';
+            return `<div class="${overdueClass}" data-id="${msg.id}"><div class="msg-header"><div class="msg-left"><span class="nickname">${escapeHtml(msg.nickname) || '匿名群众'}</span><span class="station-name">🏛️ ${escapeHtml(msg.policeStation) || '未填派出所'}</span>${branchBadge}<span class="category-badge ${catInfo.className}">${catInfo.name}</span>${complaintTypeHtml}${overdueBadge}</div><div style="display:flex; align-items:center; gap:6px;"><span class="msg-time">${formatTime(msg.timestamp)}</span><button class="delete-btn" data-id="${msg.id}" title="删除留言（需密码）">🗑️</button></div></div><div class="msg-content">${escapeHtml(msg.content)}</div>${contactHtml}${replyHtml}<button class="btn-reply" data-id="${msg.id}" data-nick="${escapeHtml(msg.nickname)}">📝 回复留言</button></div>`; 
         }).join('');
         document.querySelectorAll('.delete-btn').forEach(btn => { btn.addEventListener('click', (e) => { const id = btn.getAttribute('data-id'); const userPwd = prompt('请输入删除密码：'); if (userPwd === DELETE_PASSWORD) { if (confirm('确认删除该留言？')) { deleteMessageById(id); renderMessages(); showStatusMessage('已删除一条留言', '#c2410c', 2000); } } else if (userPwd !== null) showStatusMessage('密码错误，无法删除', '#c2410c', 2000); }); });
         document.querySelectorAll('.btn-reply').forEach(btn => { btn.addEventListener('click', (e) => { const msgId = btn.getAttribute('data-id'); const nickname = btn.getAttribute('data-nick') || '群众'; const pwd = prompt('请输入回复权限密码：'); if (pwd && REPLY_PASSWORDS.has(pwd)) { const replyText = prompt(`请输入对“${nickname}”的回复内容：`); if (replyText && replyText.trim()) { updateReply(msgId, replyText.trim(), pwd); renderMessages(); showStatusMessage('回复已提交', '#2c7a4d', 2000); } else if (replyText !== null) showStatusMessage('回复内容不能为空', '#c2410c', 2000); } else if (pwd !== null) showStatusMessage('密码错误，无回复权限', '#c2410c', 2000); }); });
@@ -865,6 +875,7 @@ referrerPolicy="no-referrer-when-downgrade"></a></div></noscript>
         const policeStation = document.getElementById('policeStation').value.trim();
         const nickname = document.getElementById('nickname').value.trim();
         const category = document.getElementById('category').value;
+        const complaintType = document.getElementById('complaintType').value;
         let content = document.getElementById('content').value.trim();
         const contact = document.getElementById('contact').value.trim();
         if (!branch) { showStatusMessage('请选择所属分局', '#c2410c', 2000); return; }
@@ -873,7 +884,7 @@ referrerPolicy="no-referrer-when-downgrade"></a></div></noscript>
         if (!content) { showStatusMessage('请填写留言内容', '#c2410c', 2000); return; }
         if (!contact) { showStatusMessage('请填写联系方式', '#c2410c', 2000); return; }
         if (content.length > 400) { showStatusMessage('内容不能超过400字', '#c2410c', 2000); return; }
-        const newMsg = { id: generateId(), branch: branch, nickname: escapeHtml(nickname.slice(0,20)), policeStation: escapeHtml(policeStation.slice(0,30)), category: category, content: escapeHtml(content), contact: escapeHtml(contact), timestamp: Date.now(), reply: null };
+        const newMsg = { id: generateId(), branch: branch, nickname: escapeHtml(nickname.slice(0,20)), policeStation: escapeHtml(policeStation.slice(0,30)), category: category, complaintType: complaintType ? escapeHtml(complaintType) : '', content: escapeHtml(content), contact: escapeHtml(contact), timestamp: Date.now(), reply: null };
         addMessage(newMsg);
         document.getElementById('branch').value = '';
         document.getElementById('policeStation').value = '';
@@ -881,6 +892,7 @@ referrerPolicy="no-referrer-when-downgrade"></a></div></noscript>
         document.getElementById('content').value = '';
         document.getElementById('contact').value = '';
         document.getElementById('category').value = 'consult';
+        document.getElementById('complaintType').value = '';
         if (currentAuthorizedBranch === branch || currentAuthorizedBranch === 'all') renderMessages();
         showStatusMessage('✅ 留言提交成功！所长会尽快督办。', '#2c7a4d', 3000);
     }
@@ -890,9 +902,9 @@ referrerPolicy="no-referrer-when-downgrade"></a></div></noscript>
         if (messages.length === 0) {
             const now = Date.now(); const overdueTime = now - 73 * 3600 * 1000;
             const samples = [
-                { id: generateId(), branch: '东营分局', nickname: '张先生', policeStation: '辛店派出所', category: 'complaint', content: '晚上广场舞音响太吵，希望派出所协调。', contact: '138****1234', timestamp: overdueTime, reply: null },
-                { id: generateId(), branch: '河口分局', nickname: '李女士', policeStation: '河口派出所', category: 'household', content: '新生儿落户需要哪些材料？', contact: '13812345678', timestamp: now - 1*24*3600*1000, reply: { text: '需出生证明、父母户口本、结婚证等。', time: now - 12*3600*1000, replier: 'hkhk1' } },
-                { id: generateId(), branch: '开发区分局', nickname: '王先生', policeStation: '东六路派出所', category: 'consult', content: '建议增加反诈宣传。', contact: '13987654321', timestamp: now - 2*24*3600*1000, reply: null }
+                { id: generateId(), branch: '东营分局', nickname: '张先生', policeStation: '辛店派出所', category: 'complaint', complaintType: '执法不作为慢作为', content: '晚上广场舞音响太吵，多次报警未见效。', contact: '138****1234', timestamp: overdueTime, reply: null },
+                { id: generateId(), branch: '河口分局', nickname: '李女士', policeStation: '河口派出所', category: 'household', complaintType: '', content: '新生儿落户需要哪些材料？', contact: '13812345678', timestamp: now - 1*24*3600*1000, reply: { text: '需出生证明、父母户口本、结婚证等。', time: now - 12*3600*1000, replier: 'hkhk1' } },
+                { id: generateId(), branch: '开发区分局', nickname: '王先生', policeStation: '东六路派出所', category: 'consult', complaintType: '', content: '建议增加反诈宣传。', contact: '13987654321', timestamp: now - 2*24*3600*1000, reply: null }
             ];
             saveMessages(samples);
         }
@@ -907,23 +919,13 @@ referrerPolicy="no-referrer-when-downgrade"></a></div></noscript>
         if (!password) { alert('无效的分局名称'); return; }
         const inputPwd = prompt(`请输入${branchName}的验证密码：`);
         if (inputPwd === password) {
-            if (branchName === '东营市局') {
-                currentAuthorizedBranch = 'all';
-                showStatusMessage('✅ 已获取最高权限，可查看全部留言', '#2c7a4d', 3000);
-            } else {
-                currentAuthorizedBranch = branchName;
-                showStatusMessage(`✅ 已授权查看${branchName}的留言`, '#2c7a4d', 2000);
-            }
+            if (branchName === '东营市局') { currentAuthorizedBranch = 'all'; showStatusMessage('✅ 已获取最高权限，可查看全部留言', '#2c7a4d', 3000); } else { currentAuthorizedBranch = branchName; showStatusMessage(`✅ 已授权查看${branchName}的留言`, '#2c7a4d', 2000); }
             currentFilterCategory = 'all';
             document.querySelectorAll('.stat-item').forEach(i => i.classList.remove('active'));
             const allItem = document.querySelector('.stat-item[data-category="all"]');
             if (allItem) allItem.classList.add('active');
             renderMessages();
-        } else if (inputPwd !== null) {
-            alert('密码错误，无法验证');
-            currentAuthorizedBranch = null;
-            renderMessages();
-        }
+        } else if (inputPwd !== null) { alert('密码错误，无法验证'); currentAuthorizedBranch = null; renderMessages(); }
     }
     
     function refreshList() { if (!currentAuthorizedBranch) { handleBranchAuth(); } else { renderMessages(); showStatusMessage('留言列表已刷新', '#2c6b9e', 1500); } }
